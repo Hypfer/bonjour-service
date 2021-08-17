@@ -9,12 +9,14 @@ export class Server {
 
     public mdns         : any
     private registry    : any = {}
+    private errorCallback: Function;
 
-    constructor(opts: any) {
+    constructor(opts: any, errorCallback?: Function | undefined) {
         this.mdns = MulticastDNS(opts)
         this.mdns.setMaxListeners(0)
         this.mdns.on('query', this.respondToQuery.bind(this))
 
+        this.errorCallback = errorCallback ?? function(err: any) {throw err;}
     }
 
     public register(records: Array<ServiceRecord> | ServiceRecord) {
@@ -62,14 +64,14 @@ export class Server {
         query.questions.forEach((question: any) => {
             var type = question.type
             var name = question.name
-        
+
             // generate the answers section
             var answers = type === 'ANY'
               ? flatten.depth(Object.keys(self.registry).map(self.recordsFor.bind(self, name)), 1)
               : self.recordsFor(name, type)
-        
+
             if (answers.length === 0) return
-        
+
             // generate the additionals section
             var additionals: Array<any> = []
             if (type !== 'ANY') {
@@ -79,7 +81,7 @@ export class Server {
                   .concat(self.recordsFor(answer.data, 'SRV'))
                   .concat(self.recordsFor(answer.data, 'TXT'))
               })
-        
+
               // to populate the A and AAAA records, we need to get a set of unique
               // targets from the SRV record
               additionals
@@ -96,9 +98,11 @@ export class Server {
                     .concat(self.recordsFor(target, 'AAAA'))
                 })
             }
-        
+
             self.mdns.respond({ answers: answers, additionals: additionals }, (err: any) => {
-              if (err) throw err
+              if(err) {
+                  this.errorCallback(err);
+              }
             })
         })
     }
@@ -107,13 +111,13 @@ export class Server {
         if (!(type in this.registry)) {
             return []
         }
-      
+
         return this.registry[type].filter((record: ServiceRecord) => {
           var _name = ~name.indexOf('.') ? record.name : record.name.split('.')[0]
           return dnsEqual(_name, name)
         })
     }
-      
+
     private isDuplicateRecord (a: ServiceRecord): (b: ServiceRecord) => any {
         return (b: ServiceRecord) => {
             return a.type === b.type &&
@@ -121,7 +125,7 @@ export class Server {
                 deepEqual(a.data, b.data)
         }
     }
-      
+
     private unique(): (obj: any) => boolean {
         var set: Array<any> = []
         return (obj: any) => {

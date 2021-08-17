@@ -12,16 +12,17 @@ export class Bonjour {
     /**
      * Setup bonjour service with optional config
      * @param opts ServiceConfig | undefined
+     * @param errorCallback Function | undefined
      */
-    constructor(opts?: ServiceConfig | undefined) {
-        this.server     = new Server(opts)
+    constructor(opts?: ServiceConfig | undefined, errorCallback?: Function | undefined) {
+        this.server     = new Server(opts, errorCallback)
         this.registry   = new Registry(this.server)
     }
 
     /**
      * Publish a service for the device with options
-     * @param opts 
-     * @returns 
+     * @param opts
+     * @returns
      */
     public publish(opts: ServiceConfig): Service {
         return this.registry.publish(opts)
@@ -30,7 +31,7 @@ export class Bonjour {
     /**
      * Unpublish all services for the device
      * @param callback
-     * @returns 
+     * @returns
      */
     public unpublishAll(callback?: CallableFunction | undefined): void {
         return this.registry.unpublishAll(callback)
@@ -40,7 +41,7 @@ export class Bonjour {
      * Find services on the network with options
      * @param opts BrowserConfig
      * @param onup Callback when up event received
-     * @returns 
+     * @returns
      */
     public find(opts: BrowserConfig | undefined = undefined, onup?: (...args: any[]) => void): Browser {
         return new Browser(this.server.mdns, opts, onup)
@@ -51,7 +52,7 @@ export class Bonjour {
      * @param opts BrowserConfig
      * @param timeout Timeout (ms) if not device is found, default 10s
      * @param callback Callback when device found
-     * @returns 
+     * @returns
      */
     public findOne(opts: BrowserConfig | undefined = undefined, timeout = 10000, callback: CallableFunction): Browser {
         const browser: Browser = new Browser(this.server.mdns, opts)
@@ -67,7 +68,7 @@ export class Bonjour {
         }, timeout)
         return browser
     }
-      
+
     /**
      * Destroy the class
      */
